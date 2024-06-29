@@ -1,0 +1,34 @@
+The main goal of the client resiliency patterns is to allow the client to fail fast,not to comsume valueable resources such as database connections 
+and thread pools
+	there are 4 client resiliency patterns
+		1. client side load balancing - it caches the service endpoints and retrived during the service discovery
+		2. circuit breakers - this ensures that service cleint should not call failling services
+		3. fallback - when a call fails, fallback ask if there is any alternate that can be executed
+		4. bulkhead - it segregates different service calls on the service cleint to ensure a poor behaving service does not use all the resources 
+			on the client.
+
+resilence implementation using resilence4j
+------------------------------------------
+circuit breaker
+	we can choose between count based sliding window and time based sliding window
+
+	count based sliding window - implemented usign circulararrayof n measurements, if the count size is 10. the cricular array array has 10 measurements.
+	incrementely updates the total aggregation, total aggregation is updated when a new call outcome is recorded. when the oldest measurement is evicted, 
+	the measurement is substracted from total aggregation
+
+	time based sliding window- The time-based sliding window is implemented with a circular array of N partial aggregations (buckets). 
+	If the time window size is 10 seconds, the circular array has always 10 partial aggregations (buckets).
+
+	Failure rate and slow call rate thresholds
+	failure rate is equal or greater than a configurable threshold -> closed - open
+	by default all the exceptions are counted as failure
+	you can define a list of exceptions which should count as a failure
+	
+	
+	
+
+
+
+
+ 
+

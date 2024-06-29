@@ -1,0 +1,116 @@
+flyway_schema_historyn 66   circuit breaker pattern
+=======================
+circuit breaker - fault tolerance
+rate limiter - block too frequent requests
+time limitter - set a time limit when calling remote operation
+retry mechanism - automatically retry a failed remote operation
+bulkhead - avoid too many concurrent requests
+cache - store result of costly remote operations
+
+circuit breaker 
+
+	user service -------------> catalog service ------------------> discount service
+						   (X)
+
+-> if catalog service goes down, user service will get 500 error
+-> we can catch and throw error to the end user 
+-> but in microservice world, we can not do this because service may go down for some time, we need to keep checking 
+and based on the threshold setted we can take decision
+
+it has three states 
+closed (default)
+half open 
+open
+
+let consider the threshold as 50%
+catalog service is down
+that means if 50% of user service to catalog service request fails then trip will happen and status changed to closed to open
+when user service sends 5 request if 3 fails and 2 success then failure rate > threshold => state will be changed to open 
+it will have the timeout, after timeout it changes the state to half open, let us say timeout as 5sec, 
+after 5 sec request will send to check the availability of the service, If available status will be changed to closed otherwise open again.
+
+retry
+=====
+user-service ------> catalog-service
+in this case there will be slowness in the catalog service, may be because of catalog service several reason it may be
+catalog service is communicating eith kafka , and there is some lag in kafka
+db running datacenter may be down
+temparary unavailability of dependencies
+deployment env failure
+
+so in this case to make our service resilience we need to adaopt retry
+
+bulkhead pattern
+----------------
+the Bulkhead Pattern involves isolating components or services into separate pools or partitions, each with its own set of resources 
+(such as threads, connections, or memory).By doing so, failures or heavy load in one partition are contained within that partition and
+do not affect the availability or performance of other partitions.
+
+Fault Isolation: If one part of the system fails or experiences a heavy load, it won't bring down the entire system. 
+Failure or overload is contained within the affected partition.
+
+Resource Management: By allocating dedicated resources to each partition, you can prevent one partition from consuming all available resources,
+ensuring fairness and stability across the system.
+
+Performance Isolation: Heavy load or performance issues in one partition won't directly impact the performance of other partitions.
+Each partition operates independently, providing more predictable performance.
+
+Resilience: The Bulkhead Pattern enhances the overall resilience of the system by reducing the blast radius of failures.
+Even if one partition fails, the rest of the system can continue to function normally.
+
+Scalability: The pattern allows for easier scalability by enabling you to scale individual partitions independently based on
+their specific requirementsand workload.
+
+ratelimitter
+------------
+API throttling, also known as rate limiting, is the process of controlling the number of requests a client can make to an API within a specified period. 
+Throttling is implemented to protect the API server from being overwhelmed by too many requests, to ensure fair usage, and to maintain optimal
+performance and availability for all users.
+Rate limiting is an API’s configured behavior to reject sender’s request when the number of requests over a window of time crosses a limit or threshold. 
+any system should always protect itself against tremendous rps as it directly impacts its availability, cost,latency and it’s overall experience.
+
+Let’s understand following typical examples where Rate Limiter can be used:
+
+Example 1 : An API which generates an authentication token can cap the maximum number of token generation request sent by a specific client
+(or/and from a specific ip address) in a period of 1 hour. Let’s say 1200 requests/hour. If the client sends more than 1200 requests in a span of 1 hour
+the server will reject the request with HTTP 429 response code.
+Example 2 : As an API service provider one can set different rate-limiting threshold for different type of customers(paid/free).
+Example 3 : As an API service provider one can set maximum number of failed requests in an hour, let’s say if user provides more than 3 incorrect PIN
+for online financial transactions in an hour, the server will rate-limit further requests.
+
+Scenarios with Rate Limiter
+Rate Limit not reached » In this case, the API sends a valid response(2xx, 5xx etc.) as per the request. Additionally, API can also send few headers which
+provide information about the current status of rate-limit like :
+HTTP/1.1 200 OK
+X-Rate-Limit-Limit: 1200
+X-Rate-Limit-Remaining: 100
+X-Rate-Limit-Reset: 1622603392
+In the above example, the rate limit threshold for the API is set to 1200 and user can send only 100 more requests before Wednesday,
+2 June 2021 3:09:52 AM GMT(1622603392) when the rate limit window gets reset.
+
+Rate Limit reached » In this case, the API sends a 429 HTTP Code(Too Many Request). Additionally, API can also provide information about when this limit
+will be reset in the header.
+HTTP/1.1 429
+X-Rate-Limit-Limit: 1200
+X-Rate-Limit-Remaining: 0
+X-Rate-Limit-Reset: 1622603529
+In the above example, the rate limit threshold for the API is set to 1200 and has already been reached. So, user can’t make any more request before
+Wednesday, 2 June 2021 3:12:09 AM GMT(1622603529) when the rate limit window would be reset.
+
+
+formore info : refer this link
+https://www.linkedin.com/pulse/rate-limiter-design-strategy-kshitiz-anand/
+https://anandkshitiz.github.io/posts/rate-limiter-implementation/
+you can test using jmeter to send the concurrent requests
+
+limitRefreshPeriod - each cycle has a duration
+limitForPeriod - at the start of each cycle the rate limiter sets the no of active permissions
+
+
+
+
+
+
+
+
+ 
